@@ -1,26 +1,39 @@
-import os
-
-from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
-from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
 from .state import AnalysisState
 
 _MODEL = "llama-3.3-70b-versatile"
 
-_SEARCH_PROMPT = """You are a market research analyst specializing in tech hiring trends.
-Search for current market demand, salary trends, and in-demand skills for the role described.
-Do 2-3 targeted searches, then stop and summarize your findings."""
+_SYSTEM = """You are a tech recruiting market analyst. Your job is to give candidates an accurate picture of where they stand in the current job market — including the uncomfortable truth if they're not competitive.
 
-_SYNTHESIS_SYSTEM = """You are a market analyst. Based on the research findings provided,
-analyze the candidate's market fit and return:
-- market_fit_score: how well the candidate aligns with current market demand (0-100)
-- trending_skills_missing: in-demand skills the candidate lacks
-- market_insights: 3-5 key market observations relevant to this candidate
-- demand_level: overall market demand for this role (Low / Medium / High / Very High)
-- summary: a concise 2-3 sentence market fit assessment"""
+CRITICAL RULES:
+- The job market for tech roles (especially senior) is highly competitive. Most applicants are rejected.
+- A candidate missing multiple core requirements is not "mostly competitive" — they are likely to be screened out.
+- Do not factor in company names on the resume as inflating the score unless the specific work is described.
+
+Scoring calibration:
+- 0-35: not competitive for this role right now — significant reskilling needed
+- 36-55: below market threshold for this specific role — might qualify for a junior version
+- 56-70: borderline — could get interviews but likely to lose out to stronger candidates
+- 71-84: competitive with some gaps to address
+- 85-100: strong market position for this role
+
+Return:
+- market_fit_score: integer 0-100, calibrated strictly
+- trending_skills_missing: in-demand skills for this role the candidate clearly lacks
+- market_insights: 3-5 direct observations. Include: how competitive this role is, what's missing, realistic outcome of applying with this resume right now.
+- demand_level: Low / Medium / High / Very High for this role type
+- salary_range: realistic salary range for this candidate given their experience and gaps (e.g. "$80k–$100k" or "Not competitive at target level"). Be honest.
+- experience_gap: one short phrase describing the experience gap (e.g. "2–3 years short", "At level", "Overqualified", "No relevant experience").
+- action_items: 3-5 concrete things the candidate should do to improve their market position. Each must have text (what to do) and priority (HIGH/MEDIUM/LOW).
+- summary: 2-3 sentences. If the candidate is unlikely to land this specific role with this resume, say so directly."""
+
+
+class ActionItem(BaseModel):
+    text: str
+    priority: str = Field(..., pattern="^(HIGH|MEDIUM|LOW)$")
 
 
 class MarketResult(BaseModel):
@@ -28,41 +41,19 @@ class MarketResult(BaseModel):
     trending_skills_missing: list[str]
     market_insights: list[str]
     demand_level: str
+    salary_range: str
+    experience_gap: str
+    action_items: list[ActionItem]
     summary: str
-
-
-def _get_tools() -> list:
-    if os.getenv("TAVILY_API_KEY"):
-        from langchain_community.tools.tavily_search import TavilySearchResults
-        return [TavilySearchResults(max_results=3)]
-    return [DuckDuckGoSearchRun()]
 
 
 def market_agent_node(state: AnalysisState) -> dict:
     llm = ChatGroq(model=_MODEL, temperature=0)
-    tools = _get_tools()
-
-    react_agent = create_react_agent(llm, tools)
-
-    # Extract role title from JD for focused search
-    jd_excerpt = state["job_description"][:400]
-    resume_excerpt = state["resume_text"][:600]
-
-    research = react_agent.invoke({
-        "messages": [
-            SystemMessage(content=_SEARCH_PROMPT),
-            HumanMessage(
-                content=f"Research current market demand and top required skills for this role:\n{jd_excerpt}"
-            ),
-        ]
-    })
-
-    findings = research["messages"][-1].content
 
     result: MarketResult = llm.with_structured_output(MarketResult).invoke([
-        SystemMessage(content=_SYNTHESIS_SYSTEM),
+        SystemMessage(content=_SYSTEM),
         HumanMessage(
-            content=f"MARKET RESEARCH FINDINGS:\n{findings}\n\nCANDIDATE RESUME EXCERPT:\n{resume_excerpt}"
+            content=f"RESUME:\n{state['resume_text']}\n\nJOB DESCRIPTION:\n{state['job_description']}"
         ),
     ])
     return {"market_result": result.model_dump()}

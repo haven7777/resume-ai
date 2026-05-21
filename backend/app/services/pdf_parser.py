@@ -13,7 +13,7 @@ async def parse_pdf(file: UploadFile) -> str:
     """
     contents = await file.read()
 
-    if os.getenv("LLAMA_CLOUD_API_KEY"):
+    if os.getenv("LLAMA_CLOUD_API_KEY", "").strip():
         return await _parse_with_llamaparse(contents, file.filename or "resume.pdf")
 
     return _parse_with_pypdf(contents)
