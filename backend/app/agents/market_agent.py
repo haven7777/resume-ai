@@ -25,7 +25,7 @@ Return:
 - trending_skills_missing: in-demand skills for this role the candidate clearly lacks
 - market_insights: 3-5 direct observations. Include: how competitive this role is, what's missing, realistic outcome of applying with this resume right now.
 - demand_level: Low / Medium / High / Very High for this role type
-- salary_range: realistic salary range for this candidate given their experience and gaps (e.g. "$80k–$100k" or "Not competitive at target level"). Be honest.
+- salary_range: realistic salary range for this candidate given their experience, gaps, and location. If a location is provided, use local market rates for that city/country. Format as a range (e.g. "$80k–$100k/yr", "£45k–£55k/yr", "Not competitive at target level"). Be honest.
 - experience_gap: one short phrase describing the experience gap (e.g. "2–3 years short", "At level", "Overqualified", "No relevant experience").
 - action_items: 3-5 concrete things the candidate should do to improve their market position. Each must have text (what to do) and priority (HIGH/MEDIUM/LOW).
 - summary: 2-3 sentences. If the candidate is unlikely to land this specific role with this resume, say so directly."""
@@ -50,10 +50,12 @@ class MarketResult(BaseModel):
 def market_agent_node(state: AnalysisState) -> dict:
     llm = ChatGroq(model=_MODEL, temperature=0)
 
+    location_line = f"\nCANDIDATE LOCATION: {state['location']}" if state.get("location") else ""
+
     result: MarketResult = llm.with_structured_output(MarketResult).invoke([
         SystemMessage(content=_SYSTEM),
         HumanMessage(
-            content=f"RESUME:\n{state['resume_text']}\n\nJOB DESCRIPTION:\n{state['job_description']}"
+            content=f"RESUME:\n{state['resume_text']}\n\nJOB DESCRIPTION:\n{state['job_description']}{location_line}"
         ),
     ])
     return {"market_result": result.model_dump()}

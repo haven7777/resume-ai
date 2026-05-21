@@ -5,7 +5,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.agents.graph import analysis_graph
-from app.main import limiter
+from app.limiter import limiter
 from app.schemas.response import AnalysisResult
 from app.services.pdf_parser import parse_pdf
 from app.services.pii_sanitizer import sanitize
@@ -26,6 +26,7 @@ async def analyze_resume(
     request: Request,
     file: UploadFile = File(..., description="PDF resume"),
     job_description: str = Form(..., min_length=10, max_length=10_000),
+    location: str | None = Form(None),
 ):
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
@@ -49,6 +50,7 @@ async def analyze_resume(
                 {
                     "resume_text": sanitized_text,
                     "job_description": sanitized_job,
+                    "location": location,
                     "hr_result": None,
                     "tech_result": None,
                     "market_result": None,

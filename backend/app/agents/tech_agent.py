@@ -27,7 +27,7 @@ Return:
 - technical_gaps: concrete gaps between what the role needs and what the resume proves.
 - project_depth: one honest sentence. "No concrete projects described", "Vague project descriptions with no measurable impact", or similar are valid outputs.
 - strengths: only verifiable, role-relevant technical strengths. Return [] if none exist.
-- skills_coverage: estimate the candidate's coverage (0-100) in each of these 5 areas based on the resume evidence: Frontend, Backend, DevOps, Data, Leadership. Return an integer for each.
+- skills_coverage: identify 4-6 skill areas that are actually relevant to THIS specific role (infer from the job description — e.g. for a construction engineer use "Structural Analysis", "AutoCAD", "Site Management", "Safety & Compliance"; for an electrician use "Wiring & Installation", "Code Compliance", "Troubleshooting", "PLC Systems"; for a data scientist use "Machine Learning", "Statistics", "Python", "Data Pipelines"). Estimate the candidate's coverage (0-100) for each area based on resume evidence. Never use generic tech categories like Frontend/Backend/DevOps for non-tech roles.
 - summary: 2-3 sentences, direct verdict. If the candidate would be rejected at the technical screen, say so and why."""
 
 
