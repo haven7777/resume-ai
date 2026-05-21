@@ -1,0 +1,11 @@
+{
+  "promptDelete": false,
+  "trashOption": "local",
+  "defaultViewMode": "source",
+  "newFileLocation": "current",
+  "newLinkFormat": "relative",
+  "useMarkdownLinks": true,
+  "showLineNumber": true,
+  "foldIndent": true,
+  "showFrontmatter": false
+}
