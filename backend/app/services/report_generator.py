@@ -121,7 +121,7 @@ class ResumeReport(FPDF):
             self.set_font("Helvetica", "", 9)
             self.set_text_color(*_DARK)
             self.set_x(self.get_x() + 3)
-            self.multi_cell(col_w - badge_w - 5, 5, item.text)
+            self.multi_cell(col_w - badge_w - 5, 5, item.text, new_x="LMARGIN", new_y="NEXT")
             self.ln(1)
 
     def skills_bars(self, skills: dict[str, int]):
@@ -225,14 +225,14 @@ def generate_report(result: AnalysisResult) -> bytes:
         pdf.cell(0, 6, str(feedback.score), align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(*_GRAY)
-        pdf.multi_cell(0, 4, feedback.summary)
+        pdf.multi_cell(0, 4, feedback.summary, new_x="LMARGIN", new_y="NEXT")
         if feedback.details:
             pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*_DARK)
             for d in feedback.details:
                 pdf.set_x(pdf.l_margin + 4)
                 pdf.cell(4, 4, "-")
-                pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin - 8, 4, d)
+                pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin - 8, 4, d, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
 
     # ── STRENGTHS ─────────────────────────────────────────────────
@@ -243,7 +243,7 @@ def generate_report(result: AnalysisResult) -> bytes:
         pdf.cell(6, 5, str(i))
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*_DARK)
-        pdf.multi_cell(0, 5, s)
+        pdf.multi_cell(0, 5, s, new_x="LMARGIN", new_y="NEXT")
 
     # ── MISSING KEYWORDS ──────────────────────────────────────────
     pdf.section_title("Missing Keywords")

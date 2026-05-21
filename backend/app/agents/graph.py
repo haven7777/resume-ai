@@ -1,4 +1,4 @@
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, StateGraph
 
 from .hr_agent import hr_agent_node
 from .market_agent import market_agent_node
@@ -75,15 +75,11 @@ def build_graph():
     g.add_node("market_agent", market_agent_node)
     g.add_node("aggregate", _aggregate_node)
 
-    # HR and Tech run in parallel, then both feed into Market
     g.set_entry_point("hr_agent")
-    g.add_edge("hr_agent", "market_agent")
+    g.add_edge("hr_agent", "tech_agent")
     g.add_edge("tech_agent", "market_agent")
     g.add_edge("market_agent", "aggregate")
     g.add_edge("aggregate", END)
-
-    # Fan-out: start tech_agent at the same time as hr_agent
-    g.add_edge(START, "tech_agent")
 
     return g.compile()
 
