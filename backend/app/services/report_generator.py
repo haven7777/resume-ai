@@ -86,25 +86,22 @@ class ResumeReport(FPDF):
     def score_circle_row(self, scores: list[tuple[str, int, str]]):
         col_w = (self.w - self.l_margin - self.r_margin) / len(scores)
         y_start = self.get_y()
-        for label, score, sublabel in scores:
-            x = self.get_x()
+        for i, (label, score, sublabel) in enumerate(scores):
+            x = self.l_margin + i * col_w
             r, g, b = _score_color(score)
             self.set_font("Helvetica", "B", 22)
             self.set_text_color(r, g, b)
+            self.set_xy(x, y_start)
             self.cell(col_w, 12, str(score), align="C")
-            self.set_x(x)
-            self.set_y(self.get_y() + 12)
             self.set_font("Helvetica", "B", 9)
             self.set_text_color(*_DARK)
+            self.set_xy(x, y_start + 12)
             self.cell(col_w, 5, label, align="C")
-            self.set_x(x)
-            self.set_y(self.get_y() + 5)
             self.set_font("Helvetica", "", 8)
             self.set_text_color(*_GRAY)
+            self.set_xy(x, y_start + 17)
             self.cell(col_w, 4, sublabel, align="C")
-            self.set_xy(x + col_w, y_start)
-        self.set_y(y_start + 21)
-        self.ln(3)
+        self.set_y(y_start + 24)
 
     def priority_list(self, items, col_w: float = 0):
         if col_w == 0:
@@ -171,8 +168,8 @@ def generate_report(result: AnalysisResult) -> bytes:
     pdf.set_fill_color(248, 245, 255)
     pdf.set_draw_color(220, 210, 255)
     y0 = pdf.get_y()
-    pdf.rect(pdf.l_margin, y0, pdf.w - pdf.l_margin - pdf.r_margin, 28, "FD")
-    pdf.set_xy(pdf.l_margin, y0 + 2)
+    pdf.rect(pdf.l_margin, y0, pdf.w - pdf.l_margin - pdf.r_margin, 30, "FD")
+    pdf.set_xy(pdf.l_margin, y0 + 3)
     pdf.score_circle_row([
         ("Overall Match", result.overall_score, _score_label(result.overall_score)),
         ("ATS Score",     hr_score,              "HR Agent"),
@@ -183,32 +180,19 @@ def generate_report(result: AnalysisResult) -> bytes:
     # ── QUICK STATS ───────────────────────────────────────────────
     qs = result.quick_stats
     pdf.section_title("Quick Stats")
-    col_w = (pdf.w - pdf.l_margin - pdf.r_margin) / 2
     stats = [
         ("Total Keywords", str(qs.total_keywords)),
         ("Match Rate",     f"{qs.match_rate}%"),
         ("Experience Gap", qs.experience_gap),
         ("Salary Range",   qs.salary_range),
     ]
-    for i, (label, value) in enumerate(stats):
-        if i % 2 == 0 and i > 0:
-            pdf.ln(1)
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_text_color(*_GRAY)
-        pdf.cell(col_w, 5, label)
-        if i % 2 == 1:
-            pdf.ln(0)
-        pdf.set_x(pdf.l_margin + (col_w if i % 2 == 1 else 0))
-
-    # Re-render stats cleanly in a table
-    pdf.set_y(pdf.get_y())
     for label, value in stats:
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*_GRAY)
-        pdf.cell(50, 5, label)
+        pdf.cell(50, 6, label)
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_text_color(*_DARK)
-        pdf.cell(0, 5, value, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, value, new_x="LMARGIN", new_y="NEXT")
 
     # ── AGENT FEEDBACK ────────────────────────────────────────────
     pdf.section_title("Agent Feedback")
