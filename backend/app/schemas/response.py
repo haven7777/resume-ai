@@ -9,7 +9,7 @@ class AgentFeedback(BaseModel):
 
 class PriorityItem(BaseModel):
     text: str
-    priority: str  # "HIGH" | "MEDIUM" | "LOW"
+    priority: str = Field(..., pattern="^(HIGH|MEDIUM|LOW)$")
 
 
 class QuickStats(BaseModel):
