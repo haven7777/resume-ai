@@ -123,3 +123,26 @@ def test_list_analyses_success(client):
         resp = client.get("/api/v1/analyses", headers={"Authorization": "Bearer valid-token"})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
+
+
+def test_generate_report_requires_auth(client):
+    """Anonymous callers must not be able to render PDFs."""
+    from tests.conftest import MOCK_FINAL_RESULT
+    resp = client.post("/api/v1/generate-report", json=MOCK_FINAL_RESULT)
+    assert resp.status_code == 401
+
+
+def test_generate_report_with_auth(client):
+    from tests.conftest import MOCK_FINAL_RESULT
+    with (
+        patch("app.api.v1.routes.get_user_id_from_token", return_value="user-123"),
+        patch("app.api.v1.routes.generate_report", return_value=b"%PDF-fake"),
+    ):
+        resp = client.post(
+            "/api/v1/generate-report",
+            json=MOCK_FINAL_RESULT,
+            headers={"Authorization": "Bearer valid-token"},
+        )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content.startswith(b"%PDF")

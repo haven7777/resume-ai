@@ -3,12 +3,6 @@ import { supabase } from "./supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function checkHealth(): Promise<{ status: string; version: string }> {
-  const res = await fetch(`${API_BASE}/health`);
-  if (!res.ok) throw new Error("Backend unreachable");
-  return res.json();
-}
-
 async function getLocation(): Promise<string | null> {
   try {
     const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
@@ -78,9 +72,16 @@ export async function getResult(analysisId: string): Promise<AnalysisResult> {
 }
 
 export async function downloadReport(result: AnalysisResult): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Sign in required to download the report.");
+  }
   const res = await fetch(`${API_BASE}/api/v1/generate-report`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify(result),
   });
 

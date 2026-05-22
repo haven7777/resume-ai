@@ -14,3 +14,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: LLAMA_CLOUD_API_KEY
+        sync: false

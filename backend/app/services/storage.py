@@ -20,9 +20,13 @@ def _get_client() -> Client:
 def get_user_id_from_token(token: str) -> str | None:
     try:
         resp = _get_client().auth.get_user(token)
-        return resp.user.id if resp.user else None
-    except Exception:
+    except Exception as exc:
+        # supabase-py raises AuthApiError / AuthInvalidJwtError; both subclass Exception.
+        # Treat any auth-layer failure as "no user" rather than 500ing the request.
+        logger = __import__("logging").getLogger(__name__)
+        logger.debug("auth.get_user failed: %s", exc)
         return None
+    return resp.user.id if resp.user else None
 
 
 def save_analysis(result: dict, user_id: str | None = None, job_title: str | None = None) -> str:

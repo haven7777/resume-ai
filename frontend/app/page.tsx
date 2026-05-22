@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, LogOut } from "lucide-react";
 import AgentProgress from "@/components/AgentProgress";
@@ -114,7 +115,7 @@ export default function Home() {
         }}
       >
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a
+          <Link
             href="/"
             aria-label="ResumeAI — go to home"
             className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg"
@@ -131,7 +132,7 @@ export default function Home() {
             >
               ResumeAI
             </span>
-          </a>
+          </Link>
           <div className="flex items-center gap-3">
             {stage !== "idle" && (
               <button

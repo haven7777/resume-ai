@@ -1,3 +1,5 @@
+import logging
+
 from langgraph.graph import END, StateGraph
 
 from .hr_agent import hr_agent_node
@@ -5,28 +7,44 @@ from .market_agent import market_agent_node
 from .state import AnalysisState
 from .tech_agent import tech_agent_node
 
+logger = logging.getLogger(__name__)
+
 
 def _aggregate_node(state: AnalysisState) -> dict:
-    hr = state["hr_result"]
-    tech = state["tech_result"]
-    market = state["market_result"]
+    # Use .get on every field — a single malformed agent dict must not 500 the run.
+    hr = state.get("hr_result") or {}
+    tech = state.get("tech_result") or {}
+    market = state.get("market_result") or {}
+
+    if not (hr and tech and market):
+        logger.warning(
+            "Aggregator received incomplete state: hr=%s tech=%s market=%s",
+            bool(hr), bool(tech), bool(market),
+        )
+
+    hr_score = int(hr.get("ats_score") or 0)
+    tech_score = int(tech.get("technical_score") or 0)
+    market_score = int(market.get("market_fit_score") or 0)
+
+    hr_missing = hr.get("missing_keywords") or []
+    hr_matched = hr.get("matched_keywords") or []
+    hr_strengths = hr.get("strengths") or []
+    tech_gaps = tech.get("technical_gaps") or []
+    tech_strengths = tech.get("strengths") or []
+    tech_highlights = tech.get("technical_highlights") or []
+    market_missing = market.get("trending_skills_missing") or []
+    market_insights = market.get("market_insights") or []
 
     # Weighted score: HR 40%, Tech 40%, Market 20%
-    raw = hr["ats_score"] * 0.4 + tech["technical_score"] * 0.4 + market["market_fit_score"] * 0.2
+    raw = hr_score * 0.4 + tech_score * 0.4 + market_score * 0.2
 
     # Penalise for missing keywords: -2 per gap, capped at -20
-    gap_count = len(hr["missing_keywords"]) + len(tech["technical_gaps"])
-    penalty = min(gap_count * 2, 20)
-
+    penalty = min((len(hr_missing) + len(tech_gaps)) * 2, 20)
     overall = max(0, int(raw - penalty))
 
-    missing = list(dict.fromkeys(
-        hr["missing_keywords"] + tech["technical_gaps"] + market["trending_skills_missing"]
-    ))[:12]
-
-    strengths = list(dict.fromkeys(hr["strengths"] + tech["strengths"]))[:6]
-
-    all_matched = list(dict.fromkeys(hr["matched_keywords"]))[:20]
+    missing = list(dict.fromkeys(hr_missing + tech_gaps + market_missing))[:12]
+    strengths = list(dict.fromkeys(hr_strengths + tech_strengths))[:6]
+    all_matched = list(dict.fromkeys(hr_matched))[:20]
 
     total_keywords = len(all_matched) + len(missing)
     match_rate = int(len(all_matched) / total_keywords * 100) if total_keywords > 0 else 0
@@ -39,19 +57,19 @@ def _aggregate_node(state: AnalysisState) -> dict:
             "strengths": strengths,
             "agent_feedback": {
                 "hr_agent": {
-                    "score": hr["ats_score"],
-                    "summary": hr["summary"],
-                    "details": hr["matched_keywords"][:6],
+                    "score": hr_score,
+                    "summary": hr.get("summary", ""),
+                    "details": hr_matched[:6],
                 },
                 "tech_lead_agent": {
-                    "score": tech["technical_score"],
-                    "summary": tech["summary"],
-                    "details": tech["technical_highlights"][:5],
+                    "score": tech_score,
+                    "summary": tech.get("summary", ""),
+                    "details": tech_highlights[:5],
                 },
                 "market_analyst_agent": {
-                    "score": market["market_fit_score"],
-                    "summary": market["summary"],
-                    "details": market["market_insights"][:5],
+                    "score": market_score,
+                    "summary": market.get("summary", ""),
+                    "details": market_insights[:5],
                 },
             },
             "priority_improvements": hr.get("priority_improvements", []),
