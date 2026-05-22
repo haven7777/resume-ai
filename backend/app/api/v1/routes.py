@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.agents.graph import analysis_graph
@@ -10,7 +10,7 @@ from app.schemas.response import AnalysisResult
 from app.services.pdf_parser import parse_pdf
 from app.services.pii_sanitizer import sanitize
 from app.services.report_generator import generate_report
-from app.services.storage import get_analysis, save_analysis
+from app.services.storage import get_analysis, get_user_id_from_token, save_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ async def analyze_resume(
     file: UploadFile = File(..., description="PDF resume"),
     job_description: str = Form(..., min_length=10, max_length=10_000),
     location: str | None = Form(None),
+    authorization: str | None = Header(None),
 ):
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
@@ -70,9 +71,20 @@ async def analyze_resume(
 
     result = AnalysisResult(**state["final_result"])
 
+    # Extract user from JWT (non-fatal)
+    user_id: str | None = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        try:
+            user_id = await asyncio.to_thread(get_user_id_from_token, token)
+        except Exception:
+            pass
+
     # Persist to Supabase (non-fatal if it fails)
     try:
-        analysis_id = await asyncio.to_thread(save_analysis, result.model_dump(exclude={"analysis_id"}))
+        analysis_id = await asyncio.to_thread(
+            save_analysis, result.model_dump(exclude={"analysis_id"}), user_id
+        )
         result.analysis_id = analysis_id
     except Exception:
         logger.warning("Failed to save analysis to Supabase", exc_info=True)
