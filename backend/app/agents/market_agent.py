@@ -8,6 +8,8 @@ from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 from tavily import TavilyClient
 
+from app.schemas.response import PriorityItem
+
 from .state import AnalysisState
 
 logger = logging.getLogger(__name__)
@@ -40,11 +42,6 @@ Return:
 - summary: 2-3 sentences. If unlikely to land this role with this resume, say so directly."""
 
 
-class ActionItem(BaseModel):
-    text: str
-    priority: str = Field(..., pattern="^(HIGH|MEDIUM|LOW)$")
-
-
 class MarketResult(BaseModel):
     market_fit_score: int = Field(..., ge=0, le=100)
     trending_skills_missing: list[str]
@@ -52,7 +49,7 @@ class MarketResult(BaseModel):
     demand_level: str
     salary_range: str
     experience_gap: str
-    action_items: list[ActionItem]
+    action_items: list[PriorityItem]
     summary: str
 
 

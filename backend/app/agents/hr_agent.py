@@ -2,6 +2,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
+from app.schemas.response import PriorityItem
+
 from .state import AnalysisState
 
 _MODEL = "llama-3.3-70b-versatile"
@@ -28,11 +30,6 @@ Return:
 - strengths: only genuine, evidence-backed strengths. Return [] if nothing stands out for this role.
 - priority_improvements: 3-5 specific, actionable improvements ranked by impact. Each must have text (what to do) and priority (HIGH/MEDIUM/LOW).
 - summary: 2-3 sentences, factual and direct. If the candidate is weak, say so. No filler phrases like "strong foundation" or "promising candidate"."""
-
-
-class PriorityItem(BaseModel):
-    text: str
-    priority: str = Field(..., pattern="^(HIGH|MEDIUM|LOW)$")
 
 
 class HRResult(BaseModel):

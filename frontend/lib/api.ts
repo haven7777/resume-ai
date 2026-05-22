@@ -40,6 +40,12 @@ export async function analyzeResume(
   });
 
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error("You've hit the analysis rate limit (20 per hour). Try again later.");
+    }
+    if (res.status === 504) {
+      throw new Error("The analysis took too long. The backend may be cold-starting — please retry.");
+    }
     const err = await res.json().catch(() => ({ detail: "Unknown error" }));
     throw new Error(err.detail ?? `Server error ${res.status}`);
   }
@@ -61,7 +67,11 @@ export async function getUserAnalyses(): Promise<AnalysisSummary[]> {
   const res = await fetch(`${API_BASE}/api/v1/analyses`, {
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
-  if (!res.ok) throw new Error("Failed to load analyses");
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Too many requests — try again in a minute.");
+    if (res.status === 401) throw new Error("Your session has expired. Please sign in again.");
+    throw new Error("Failed to load analyses");
+  }
   return res.json();
 }
 
@@ -85,7 +95,11 @@ export async function downloadReport(result: AnalysisResult): Promise<void> {
     body: JSON.stringify(result),
   });
 
-  if (!res.ok) throw new Error("Failed to generate report");
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("PDF rate limit reached (30 per hour). Try again later.");
+    if (res.status === 401) throw new Error("Sign in required to download the report.");
+    throw new Error("Failed to generate report");
+  }
 
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

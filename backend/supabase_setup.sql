@@ -15,14 +15,51 @@ ALTER TABLE public.analyses ADD COLUMN IF NOT EXISTS job_title TEXT;
 CREATE INDEX IF NOT EXISTS analyses_user_id_created_at_idx
   ON public.analyses (user_id, created_at DESC);
 
--- Row Level Security:
---   Public read so results/{id} share links work for anonymous viewers.
---   Service-role writes (backend uses SUPABASE_SERVICE_KEY which bypasses RLS,
---   but the policy is here for completeness if anon writes are ever enabled).
+-- ============================================================
+-- Row Level Security
+-- ============================================================
+-- Threat model:
+--   * Backend uses SUPABASE_SERVICE_KEY (service_role) which bypasses RLS.
+--     All writes happen via the backend after JWT verification.
+--   * Frontend uses the anon key only for Supabase Auth; it never reads or
+--     writes `analyses` directly. RLS policies below defend against any
+--     future client-side direct queries and against direct-to-Supabase
+--     traffic from non-backend clients.
+--
+-- Policy summary:
+--   SELECT — public (share-by-UUID is a deliberate product feature: anyone
+--            who has a UUID may read that row's result; UUIDv4 is the
+--            capability).
+--   INSERT — denied for anon/authenticated. Only service_role (the backend)
+--            can write rows. The previous "WITH CHECK (true)" policy let
+--            anyone insert; this is now removed.
+--   UPDATE/DELETE — denied for everyone except service_role.
+-- ============================================================
+
 ALTER TABLE public.analyses ENABLE ROW LEVEL SECURITY;
 
+-- Drop any old/overly-permissive policies from previous setups
 DROP POLICY IF EXISTS "public read" ON public.analyses;
-CREATE POLICY "public read" ON public.analyses FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "service insert" ON public.analyses;
-CREATE POLICY "service insert" ON public.analyses FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "anon read" ON public.analyses;
+DROP POLICY IF EXISTS "authenticated read own" ON public.analyses;
+
+-- Public read — supports share-by-UUID.
+CREATE POLICY "public read" ON public.analyses
+  FOR SELECT
+  USING (true);
+
+-- No INSERT/UPDATE/DELETE policies for anon or authenticated roles.
+-- service_role bypasses RLS, so the backend continues to write normally.
+-- If you ever want to allow client-side writes, add a policy like:
+--   CREATE POLICY "user inserts own" ON public.analyses
+--     FOR INSERT TO authenticated
+--     WITH CHECK (user_id = auth.uid());
+
+-- ============================================================
+-- Quick verification queries (paste into SQL Editor after running):
+--   -- Confirm policies on the table:
+--   SELECT polname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'analyses';
+--   -- Confirm RLS is enabled:
+--   SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'analyses';
+-- ============================================================
