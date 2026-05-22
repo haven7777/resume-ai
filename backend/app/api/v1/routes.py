@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Uploa
 from fastapi.responses import Response
 
 from app.agents.graph import analysis_graph
+from app.agents.market_agent import _extract_role
 from app.limiter import limiter
 from app.schemas.response import AnalysisResult
 from app.services.pdf_parser import parse_pdf
@@ -21,7 +22,7 @@ _ANALYSIS_TIMEOUT = 90  # seconds
 
 
 @router.post("/analyze-resume", response_model=AnalysisResult)
-@limiter.limit("2/minute")
+@limiter.limit("20/hour")
 async def analyze_resume(
     request: Request,
     file: UploadFile = File(..., description="PDF resume"),
@@ -82,8 +83,9 @@ async def analyze_resume(
 
     # Persist to Supabase (non-fatal if it fails)
     try:
+        job_title = _extract_role(sanitized_job)
         analysis_id = await asyncio.to_thread(
-            save_analysis, result.model_dump(exclude={"analysis_id"}), user_id
+            save_analysis, result.model_dump(exclude={"analysis_id"}), user_id, job_title
         )
         result.analysis_id = analysis_id
     except Exception:

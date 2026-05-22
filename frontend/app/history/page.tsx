@@ -152,7 +152,7 @@ export default function HistoryPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate" style={{ color: "#1E1B4B" }}>
-                      Analysis #{analyses.length - i}
+                      {a.job_title ?? `Analysis #${analyses.length - i}`}
                     </p>
                     <p className="flex items-center gap-1 text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
                       <Clock size={11} aria-hidden="true" />

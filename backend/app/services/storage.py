@@ -25,11 +25,13 @@ def get_user_id_from_token(token: str) -> str | None:
         return None
 
 
-def save_analysis(result: dict, user_id: str | None = None) -> str:
+def save_analysis(result: dict, user_id: str | None = None, job_title: str | None = None) -> str:
     analysis_id = str(uuid.uuid4())
     row: dict = {"id": analysis_id, "result": result}
     if user_id:
         row["user_id"] = user_id
+    if job_title:
+        row["job_title"] = job_title
     _get_client().table("analyses").insert(row).execute()
     return analysis_id
 
@@ -45,7 +47,7 @@ def get_user_analyses(user_id: str) -> list[dict]:
     resp = (
         _get_client()
         .table("analyses")
-        .select("id, created_at, result->overall_score, result->quick_stats")
+        .select("id, created_at, job_title, result->overall_score, result->quick_stats")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(50)

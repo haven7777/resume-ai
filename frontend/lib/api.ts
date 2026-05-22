@@ -56,6 +56,7 @@ export async function analyzeResume(
 export interface AnalysisSummary {
   id: string;
   created_at: string;
+  job_title: string | null;
   overall_score: number;
   quick_stats: { salary_range: string; match_rate: number } | null;
 }
