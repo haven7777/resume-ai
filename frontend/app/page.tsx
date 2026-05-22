@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AlertCircle } from "lucide-react";
 import AgentProgress from "@/components/AgentProgress";
 import AnalysisResults from "@/components/AnalysisResults";
 import UploadForm from "@/components/UploadForm";
@@ -42,10 +43,12 @@ export default function Home() {
     setError(null);
   }
 
+  const isAnalyzing = stage === "hr_agent" || stage === "tech_agent" || stage === "market_agent";
+
   return (
-    <div className="min-h-screen relative overflow-x-hidden" style={{ background: "#F5F3FF" }}>
+    <div className="min-h-[100dvh] relative overflow-x-hidden" style={{ background: "#F5F3FF" }}>
       {/* Gradient blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div
           className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-3xl opacity-20"
           style={{ background: "radial-gradient(circle, #7C3AED, transparent)" }}
@@ -70,7 +73,11 @@ export default function Home() {
         }}
       >
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <a
+            href="/"
+            aria-label="ResumeAI — go to home"
+            className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg"
+          >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-extrabold"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)", fontFamily: "var(--font-jakarta)" }}
@@ -83,11 +90,11 @@ export default function Home() {
             >
               ResumeAI
             </span>
-          </div>
+          </a>
           {stage !== "idle" && (
             <button
               onClick={reset}
-              className="text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60"
+              className="text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
               style={{ color: "#7C3AED", borderColor: "rgba(124,58,237,0.3)" }}
             >
               New Analysis
@@ -96,13 +103,16 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Content */}
-      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      {/* Content — aria-live announces transitions to screen readers */}
+      <main
+        id="main-content"
+        className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12"
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {stage === "idle" && <UploadForm onSubmit={handleSubmit} />}
 
-        {(stage === "hr_agent" || stage === "tech_agent" || stage === "market_agent") && (
-          <AgentProgress stage={stage} />
-        )}
+        {isAnalyzing && <AgentProgress stage={stage} />}
 
         {stage === "done" && result && (
           <AnalysisResults result={result} onReset={reset} />
@@ -110,11 +120,12 @@ export default function Home() {
 
         {stage === "error" && (
           <div className="flex flex-col items-center gap-4 py-24">
-            <div className="text-5xl">😕</div>
+            <h1 className="sr-only">Analysis failed</h1>
+            <AlertCircle size={48} className="text-red-400" aria-hidden="true" />
             <p className="font-medium" style={{ color: "#EF4444" }}>{error}</p>
             <button
               onClick={reset}
-              className="px-8 py-3 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="px-8 py-3 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)" }}
             >
               Try Again

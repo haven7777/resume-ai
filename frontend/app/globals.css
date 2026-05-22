@@ -5,8 +5,33 @@
   --font-display: var(--font-jakarta);
 }
 
+:root {
+  --color-primary: #7C3AED;
+  --color-primary-dim: rgba(124, 58, 237, 0.1);
+  --color-primary-border: rgba(124, 58, 237, 0.2);
+  --color-bg: #F5F3FF;
+  --color-dark: #1E1B4B;
+  --color-gray: #6B7280;
+  --color-muted: #9CA3AF;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-blue: #3B82F6;
+  --color-card: rgba(255, 255, 255, 0.72);
+  --color-border: rgba(124, 58, 237, 0.12);
+}
+
 body {
-  background-color: #F5F3FF;
-  color: #1E1B4B;
+  background-color: var(--color-bg);
+  color: var(--color-dark);
   font-family: var(--font-dm-sans, DM Sans, sans-serif);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
