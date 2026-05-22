@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Loader2, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -13,13 +14,11 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -41,12 +40,18 @@ export default function AuthPage() {
   async function handleGoogle() {
     setGoogleLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
-    });
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      if (error) {
+        setError(error.message);
+        setGoogleLoading(false);
+      }
+      // On success the browser navigates away — leave loading state set.
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
       setGoogleLoading(false);
     }
   }
@@ -64,11 +69,11 @@ export default function AuthPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b" style={{ background: "rgba(245,243,255,0.85)", backdropFilter: "blur(20px)", borderColor: "rgba(124,58,237,0.1)" }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center">
-          <a href="/" className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg">
+          <Link href="/" className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-extrabold"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)", fontFamily: "var(--font-jakarta)" }}>R</div>
             <span className="font-extrabold text-lg tracking-tight" style={{ fontFamily: "var(--font-jakarta)", color: "#1E1B4B" }}>ResumeAI</span>
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -119,7 +124,7 @@ export default function AuthPage() {
 
               <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "rgba(124,58,237,0.15)" }}>
                 {(["signin", "signup"] as const).map((m) => (
-                  <button key={m} onClick={() => { setMode(m); setError(null); setSuccess(null); }}
+                  <button key={m} onClick={() => { setMode(m); setError(null); }}
                     className="flex-1 py-2 text-sm font-semibold transition-colors"
                     style={{
                       background: mode === m ? "linear-gradient(135deg, #7C3AED, #3B82F6)" : "transparent",

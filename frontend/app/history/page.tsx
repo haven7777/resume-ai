@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Clock, ExternalLink, LogOut, TrendingUp } from "lucide-react";
 import { getUserAnalyses, type AnalysisSummary } from "@/lib/api";
@@ -70,11 +71,11 @@ export default function HistoryPage() {
       <nav className="sticky top-0 z-50 border-b"
         style={{ background: "rgba(245,243,255,0.85)", backdropFilter: "blur(20px)", borderColor: "rgba(124,58,237,0.1)" }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg">
+          <Link href="/" className="flex items-center gap-2.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded-lg">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-extrabold"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)", fontFamily: "var(--font-jakarta)" }}>R</div>
             <span className="font-extrabold text-lg tracking-tight" style={{ fontFamily: "var(--font-jakarta)", color: "#1E1B4B" }}>ResumeAI</span>
-          </a>
+          </Link>
           <div className="flex items-center gap-3">
             <span className="hidden sm:block text-xs font-medium truncate max-w-[160px]" style={{ color: "#6B7280" }}>{user.email}</span>
             <button onClick={signOut} aria-label="Sign out"
@@ -96,11 +97,11 @@ export default function HistoryPage() {
                 My Analyses
               </h1>
             </div>
-            <a href="/"
+            <Link href="/"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)" }}>
               + New Analysis
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -130,11 +131,11 @@ export default function HistoryPage() {
               <p className="font-semibold" style={{ color: "#1E1B4B" }}>No analyses yet</p>
               <p className="text-sm" style={{ color: "#6B7280" }}>Upload your resume to get your first analysis.</p>
             </div>
-            <a href="/"
+            <Link href="/"
               className="px-6 py-2.5 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)" }}>
               Analyze My Resume
-            </a>
+            </Link>
           </div>
         )}
 

@@ -559,7 +559,6 @@ export default function AnalysisResults({ result, onReset }: Props) {
             ) : (
               <ul className="space-y-3">
                 {result.action_items.slice(0, 5).map((item, i) => {
-                  const s = PRIORITY_STYLE[item.priority as keyof typeof PRIORITY_STYLE] ?? PRIORITY_STYLE.LOW;
                   return (
                     <li key={i} className="flex items-start gap-3">
                       <span

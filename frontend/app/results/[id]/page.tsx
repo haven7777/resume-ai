@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import AnalysisResults from "@/components/AnalysisResults";
 import { getResult } from "@/lib/api";
@@ -40,7 +41,7 @@ export default function SharedResultPage() {
       >
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <a href="/" className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2.5">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-extrabold"
                 style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)", fontFamily: "var(--font-jakarta)" }}
@@ -53,15 +54,15 @@ export default function SharedResultPage() {
               >
                 ResumeAI
               </span>
-            </a>
+            </Link>
           </div>
-          <a
+          <Link
             href="/"
             className="text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60"
             style={{ color: "#7C3AED", borderColor: "rgba(124,58,237,0.3)" }}
           >
             Analyze My Resume
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -81,13 +82,13 @@ export default function SharedResultPage() {
             <p className="font-medium" style={{ color: "#EF4444" }}>
               This analysis link is invalid or has expired.
             </p>
-            <a
+            <Link
               href="/"
               className="px-8 py-3 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity"
               style={{ background: "linear-gradient(135deg, #7C3AED, #3B82F6)" }}
             >
               Run a New Analysis
-            </a>
+            </Link>
           </div>
         )}
 

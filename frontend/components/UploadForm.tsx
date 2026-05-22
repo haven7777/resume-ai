@@ -8,24 +8,45 @@ interface Props {
   disabled?: boolean;
 }
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB — must match backend _MAX_PDF_BYTES
+
 export default function UploadForm({ onSubmit, disabled }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [dragging, setDragging] = useState(false);
   const [touched, setTouched] = useState({ file: false, jd: false });
+  const [fileRejection, setFileRejection] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function acceptFile(dropped: File | null | undefined) {
+    setTouched((t) => ({ ...t, file: true }));
+    if (!dropped) {
+      setFile(null);
+      return;
+    }
+    if (dropped.type !== "application/pdf") {
+      setFile(null);
+      setFileRejection("Only PDF files are accepted.");
+      return;
+    }
+    if (dropped.size > MAX_FILE_BYTES) {
+      setFile(null);
+      setFileRejection(`File exceeds 10 MB limit (${(dropped.size / 1024 / 1024).toFixed(1)} MB).`);
+      return;
+    }
+    setFileRejection(null);
+    setFile(dropped);
+  }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    setTouched((t) => ({ ...t, file: true }));
-    const dropped = e.dataTransfer.files[0];
-    if (dropped?.type === "application/pdf") setFile(dropped);
+    acceptFile(e.dataTransfer.files[0]);
   };
 
   const canSubmit = !!(file && jobDescription.trim().length >= 10 && !disabled);
 
-  const fileError = touched.file && !file ? "Please upload a PDF resume." : null;
+  const fileError = fileRejection ?? (touched.file && !file ? "Please upload a PDF resume." : null);
   const jdError = touched.jd && jobDescription.trim().length < 10
     ? "Job description must be at least 10 characters."
     : null;
@@ -87,7 +108,6 @@ export default function UploadForm({ onSubmit, disabled }: Props) {
             tabIndex={0}
             aria-labelledby="resume-label"
             aria-describedby={fileError ? "file-error" : undefined}
-            aria-required="true"
             onClick={() => inputRef.current?.click()}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -121,10 +141,7 @@ export default function UploadForm({ onSubmit, disabled }: Props) {
               accept="application/pdf"
               aria-required="true"
               className="hidden"
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-                setTouched((t) => ({ ...t, file: true }));
-              }}
+              onChange={(e) => acceptFile(e.target.files?.[0])}
             />
             {file ? (
               <div className="flex flex-col items-center gap-2 text-center">

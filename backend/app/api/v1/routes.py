@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.agents.graph import analysis_graph
@@ -19,6 +19,15 @@ router = APIRouter(prefix="/api/v1")
 
 _MAX_PDF_BYTES = 10 * 1024 * 1024  # 10 MB
 _ANALYSIS_TIMEOUT = 90  # seconds
+
+
+async def require_user_id(authorization: str | None = Header(None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    user_id = await asyncio.to_thread(get_user_id_from_token, authorization[7:])
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return user_id
 
 
 @router.post("/analyze-resume", response_model=AnalysisResult)
@@ -72,14 +81,13 @@ async def analyze_resume(
 
     result = AnalysisResult(**state["final_result"])
 
-    # Extract user from JWT (non-fatal)
+    # Extract user from JWT (non-fatal — anonymous analyses are allowed)
     user_id: str | None = None
     if authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
         try:
-            user_id = await asyncio.to_thread(get_user_id_from_token, token)
-        except Exception:
-            pass
+            user_id = await asyncio.to_thread(get_user_id_from_token, authorization[7:])
+        except (ValueError, RuntimeError) as exc:
+            logger.debug("Failed to decode bearer token: %s", exc)
 
     # Persist to Supabase (non-fatal if it fails)
     try:
@@ -95,18 +103,14 @@ async def analyze_resume(
 
 
 @router.get("/analyses")
-async def list_analyses(authorization: str | None = Header(None)) -> list[dict]:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authentication required.")
-    token = authorization[7:]
-    user_id = await asyncio.to_thread(get_user_id_from_token, token)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+@limiter.limit("60/hour")
+async def list_analyses(request: Request, user_id: str = Depends(require_user_id)) -> list[dict]:
     return await asyncio.to_thread(get_user_analyses, user_id)
 
 
 @router.get("/results/{analysis_id}", response_model=AnalysisResult)
-async def get_result(analysis_id: str):
+@limiter.limit("120/hour")
+async def get_result(request: Request, analysis_id: str) -> AnalysisResult:
     data = await asyncio.to_thread(get_analysis, analysis_id)
     if not data:
         raise HTTPException(status_code=404, detail="Analysis not found.")
@@ -114,7 +118,12 @@ async def get_result(analysis_id: str):
 
 
 @router.post("/generate-report")
-async def generate_report_endpoint(result: AnalysisResult) -> Response:
+@limiter.limit("30/hour")
+async def generate_report_endpoint(
+    request: Request,
+    result: AnalysisResult,
+    user_id: str = Depends(require_user_id),
+) -> Response:
     pdf_bytes = await asyncio.to_thread(generate_report, result)
     return Response(
         content=pdf_bytes,
