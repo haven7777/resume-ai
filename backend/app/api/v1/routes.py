@@ -10,7 +10,7 @@ from app.schemas.response import AnalysisResult
 from app.services.pdf_parser import parse_pdf
 from app.services.pii_sanitizer import sanitize
 from app.services.report_generator import generate_report
-from app.services.storage import get_analysis, get_user_id_from_token, save_analysis
+from app.services.storage import get_analysis, get_user_analyses, get_user_id_from_token, save_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,17 @@ async def analyze_resume(
         logger.warning("Failed to save analysis to Supabase", exc_info=True)
 
     return result
+
+
+@router.get("/analyses")
+async def list_analyses(authorization: str | None = Header(None)) -> list[dict]:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = authorization[7:]
+    user_id = await asyncio.to_thread(get_user_id_from_token, token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return await asyncio.to_thread(get_user_analyses, user_id)
 
 
 @router.get("/results/{analysis_id}", response_model=AnalysisResult)

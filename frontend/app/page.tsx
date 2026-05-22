@@ -142,6 +142,13 @@ export default function Home() {
                 New Analysis
               </button>
             )}
+            <a
+              href="/history"
+              className="hidden sm:inline-flex text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+              style={{ color: "#7C3AED", borderColor: "rgba(124,58,237,0.3)" }}
+            >
+              History
+            </a>
             <span className="hidden sm:block text-xs font-medium truncate max-w-[160px]" style={{ color: "#6B7280" }}>
               {user.email}
             </span>

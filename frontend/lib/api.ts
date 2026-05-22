@@ -53,6 +53,23 @@ export async function analyzeResume(
   return res.json();
 }
 
+export interface AnalysisSummary {
+  id: string;
+  created_at: string;
+  overall_score: number;
+  quick_stats: { salary_range: string; match_rate: number } | null;
+}
+
+export async function getUserAnalyses(): Promise<AnalysisSummary[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return [];
+  const res = await fetch(`${API_BASE}/api/v1/analyses`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!res.ok) throw new Error("Failed to load analyses");
+  return res.json();
+}
+
 export async function getResult(analysisId: string): Promise<AnalysisResult> {
   const res = await fetch(`${API_BASE}/api/v1/results/${analysisId}`);
   if (!res.ok) throw new Error("Analysis not found");

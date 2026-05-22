@@ -39,3 +39,16 @@ def get_analysis(analysis_id: str) -> dict | None:
     if resp.data:
         return resp.data["result"]
     return None
+
+
+def get_user_analyses(user_id: str) -> list[dict]:
+    resp = (
+        _get_client()
+        .table("analyses")
+        .select("id, created_at, result->overall_score, result->quick_stats")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return resp.data or []
