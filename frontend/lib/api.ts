@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "@/types/analysis";
+import { supabase } from "./supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -32,8 +33,15 @@ export async function analyzeResume(
   form.append("job_description", jobDescription);
   if (location) form.append("location", location);
 
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: HeadersInit = {};
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
+
   const res = await fetch(`${API_BASE}/api/v1/analyze-resume`, {
     method: "POST",
+    headers,
     body: form,
   });
 

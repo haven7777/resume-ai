@@ -17,9 +17,20 @@ def _get_client() -> Client:
     return _client
 
 
-def save_analysis(result: dict) -> str:
+def get_user_id_from_token(token: str) -> str | None:
+    try:
+        resp = _get_client().auth.get_user(token)
+        return resp.user.id if resp.user else None
+    except Exception:
+        return None
+
+
+def save_analysis(result: dict, user_id: str | None = None) -> str:
     analysis_id = str(uuid.uuid4())
-    _get_client().table("analyses").insert({"id": analysis_id, "result": result}).execute()
+    row: dict = {"id": analysis_id, "result": result}
+    if user_id:
+        row["user_id"] = user_id
+    _get_client().table("analyses").insert(row).execute()
     return analysis_id
 
 

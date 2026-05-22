@@ -1,37 +1,78 @@
 "use client";
 
-import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, LogOut } from "lucide-react";
 import AgentProgress from "@/components/AgentProgress";
 import AnalysisResults from "@/components/AnalysisResults";
 import UploadForm from "@/components/UploadForm";
 import { analyzeResume } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import type { AnalysisResult, AnalysisStage } from "@/types/analysis";
 
-const STAGE_DELAYS: { stage: AnalysisStage; ms: number }[] = [
-  { stage: "hr_agent", ms: 0 },
-  { stage: "tech_agent", ms: 8000 },
-  { stage: "market_agent", ms: 16000 },
-];
-
 export default function Home() {
+  const router = useRouter();
+  const { user, loading: authLoading, signOut } = useAuth();
+
   const [stage, setStage] = useState<AnalysisStage>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center" style={{ background: "#F5F3FF" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-purple-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   async function handleSubmit(file: File, jobDescription: string) {
     setError(null);
     setResult(null);
-    const timers = STAGE_DELAYS.map(({ stage: s, ms }) =>
-      setTimeout(() => setStage(s), ms)
-    );
+
+    const startMs = Date.now();
+
+    // Normal pacing: each agent gets ~6s on screen
+    const stageTimers = [
+      setTimeout(() => setStage("hr_agent"), 0),
+      setTimeout(() => setStage("tech_agent"), 6000),
+      setTimeout(() => setStage("market_agent"), 12000),
+    ];
+    timersRef.current = stageTimers;
+
     try {
       const data = await analyzeResume(file, jobDescription);
-      timers.forEach(clearTimeout);
-      setStage("done");
-      setResult(data);
+      const elapsed = Date.now() - startMs;
+
+      // Clear normal-pacing timers
+      stageTimers.forEach(clearTimeout);
+
+      if (elapsed >= 12000) {
+        // All 3 agents already shown at normal pace — go to done immediately
+        setStage("done");
+        setResult(data);
+      } else if (elapsed >= 6000) {
+        // HR + Tech already shown, fast-forward market agent then done
+        setStage("market_agent");
+        const t = setTimeout(() => { setStage("done"); setResult(data); }, 1200);
+        timersRef.current = [t];
+      } else {
+        // API returned very fast — step through remaining agents quickly
+        setStage("tech_agent");
+        const t1 = setTimeout(() => setStage("market_agent"), 1200);
+        const t2 = setTimeout(() => { setStage("done"); setResult(data); }, 2400);
+        timersRef.current = [t1, t2];
+      }
     } catch (err) {
-      timers.forEach(clearTimeout);
+      timersRef.current.forEach(clearTimeout);
       setStage("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");
     }
@@ -91,15 +132,29 @@ export default function Home() {
               ResumeAI
             </span>
           </a>
-          {stage !== "idle" && (
+          <div className="flex items-center gap-3">
+            {stage !== "idle" && (
+              <button
+                onClick={reset}
+                className="text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                style={{ color: "#7C3AED", borderColor: "rgba(124,58,237,0.3)" }}
+              >
+                New Analysis
+              </button>
+            )}
+            <span className="hidden sm:block text-xs font-medium truncate max-w-[160px]" style={{ color: "#6B7280" }}>
+              {user.email}
+            </span>
             <button
-              onClick={reset}
-              className="text-sm font-semibold px-4 py-2 rounded-full border transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+              onClick={signOut}
+              aria-label="Sign out"
+              className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-full border transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
               style={{ color: "#7C3AED", borderColor: "rgba(124,58,237,0.3)" }}
             >
-              New Analysis
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
-          )}
+          </div>
         </div>
       </nav>
 
