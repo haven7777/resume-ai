@@ -3,7 +3,6 @@
 > Upload a resume + a job description. Three specialized AI agents grade the fit, surface missing keywords, predict market position, and hand back an actionable report — in under 30 seconds.
 
 🌐 **Live demo:** https://frontend-kappa-lyart-79.vercel.app
-🔧 **API:** https://resume-ai-backend-81kb.onrender.com
 
 ---
 
