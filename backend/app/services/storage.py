@@ -37,9 +37,9 @@ def save_analysis(result: dict, user_id: str | None = None, job_title: str | Non
 
 
 def get_analysis(analysis_id: str) -> dict | None:
-    resp = _get_client().table("analyses").select("result").eq("id", analysis_id).single().execute()
+    resp = _get_client().table("analyses").select("result").eq("id", analysis_id).limit(1).execute()
     if resp.data:
-        return resp.data["result"]
+        return resp.data[0]["result"]
     return None
 
 
