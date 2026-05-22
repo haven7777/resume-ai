@@ -1,23 +1,32 @@
 import asyncio
+import logging
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.agents.graph import analysis_graph
+from app.limiter import limiter
 from app.schemas.response import AnalysisResult
 from app.services.pdf_parser import parse_pdf
 from app.services.pii_sanitizer import sanitize
 from app.services.report_generator import generate_report
+from app.services.storage import get_analysis, save_analysis
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 
 _MAX_PDF_BYTES = 10 * 1024 * 1024  # 10 MB
+_ANALYSIS_TIMEOUT = 90  # seconds
 
 
 @router.post("/analyze-resume", response_model=AnalysisResult)
+@limiter.limit("2/minute")
 async def analyze_resume(
+    request: Request,
     file: UploadFile = File(..., description="PDF resume"),
     job_description: str = Form(..., min_length=10, max_length=10_000),
+    location: str | None = Form(None),
 ):
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
@@ -34,23 +43,49 @@ async def analyze_resume(
     sanitized_text = sanitize(raw_text)
     sanitized_job = sanitize(job_description)
 
-    # Run LangGraph pipeline in a thread so it doesn't block the event loop
-    state = await asyncio.to_thread(
-        analysis_graph.invoke,
-        {
-            "resume_text": sanitized_text,
-            "job_description": sanitized_job,
-            "hr_result": None,
-            "tech_result": None,
-            "market_result": None,
-            "final_result": None,
-        },
-    )
+    try:
+        state = await asyncio.wait_for(
+            asyncio.to_thread(
+                analysis_graph.invoke,
+                {
+                    "resume_text": sanitized_text,
+                    "job_description": sanitized_job,
+                    "location": location,
+                    "hr_result": None,
+                    "tech_result": None,
+                    "market_result": None,
+                    "final_result": None,
+                },
+            ),
+            timeout=_ANALYSIS_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Analysis timed out. The AI agents took too long to respond. Please try again.",
+        )
 
     if not state.get("final_result"):
         raise HTTPException(status_code=500, detail="Analysis pipeline failed to produce a result.")
 
-    return AnalysisResult(**state["final_result"])
+    result = AnalysisResult(**state["final_result"])
+
+    # Persist to Supabase (non-fatal if it fails)
+    try:
+        analysis_id = await asyncio.to_thread(save_analysis, result.model_dump(exclude={"analysis_id"}))
+        result.analysis_id = analysis_id
+    except Exception:
+        logger.warning("Failed to save analysis to Supabase", exc_info=True)
+
+    return result
+
+
+@router.get("/results/{analysis_id}", response_model=AnalysisResult)
+async def get_result(analysis_id: str):
+    data = await asyncio.to_thread(get_analysis, analysis_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    return AnalysisResult(analysis_id=analysis_id, **data)
 
 
 @router.post("/generate-report")

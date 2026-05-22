@@ -12,7 +12,13 @@ def _aggregate_node(state: AnalysisState) -> dict:
     market = state["market_result"]
 
     # Weighted score: HR 40%, Tech 40%, Market 20%
-    overall = int(hr["ats_score"] * 0.4 + tech["technical_score"] * 0.4 + market["market_fit_score"] * 0.2)
+    raw = hr["ats_score"] * 0.4 + tech["technical_score"] * 0.4 + market["market_fit_score"] * 0.2
+
+    # Penalise for missing keywords: -2 per gap, capped at -20
+    gap_count = len(hr["missing_keywords"]) + len(tech["technical_gaps"])
+    penalty = min(gap_count * 2, 20)
+
+    overall = max(0, int(raw - penalty))
 
     missing = list(dict.fromkeys(
         hr["missing_keywords"] + tech["technical_gaps"] + market["trending_skills_missing"]
@@ -20,10 +26,16 @@ def _aggregate_node(state: AnalysisState) -> dict:
 
     strengths = list(dict.fromkeys(hr["strengths"] + tech["strengths"]))[:6]
 
+    all_matched = list(dict.fromkeys(hr["matched_keywords"]))[:20]
+
+    total_keywords = len(all_matched) + len(missing)
+    match_rate = int(len(all_matched) / total_keywords * 100) if total_keywords > 0 else 0
+
     return {
         "final_result": {
             "overall_score": overall,
             "missing_keywords": missing,
+            "matched_keywords": all_matched,
             "strengths": strengths,
             "agent_feedback": {
                 "hr_agent": {
@@ -41,6 +53,15 @@ def _aggregate_node(state: AnalysisState) -> dict:
                     "summary": market["summary"],
                     "details": market["market_insights"][:5],
                 },
+            },
+            "priority_improvements": hr.get("priority_improvements", []),
+            "action_items": market.get("action_items", []),
+            "skills_coverage": tech.get("skills_coverage", {}),
+            "quick_stats": {
+                "total_keywords": total_keywords,
+                "match_rate": match_rate,
+                "experience_gap": market.get("experience_gap", "Unknown"),
+                "salary_range": market.get("salary_range", "Unknown"),
             },
         }
     }
