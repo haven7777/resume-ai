@@ -73,6 +73,8 @@ def save_analysis(result: dict, user_id: str | None = None, job_title: str | Non
 
 
 def get_analysis(analysis_id: str) -> dict | None:
+    if not _is_uuid(analysis_id):
+        return None
     resp = _get_client().table("analyses").select("result").eq("id", analysis_id).limit(1).execute()
     if resp.data:
         return resp.data[0]["result"]
